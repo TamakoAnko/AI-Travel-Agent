@@ -55,7 +55,7 @@ PLAN_FORMAT = """输出严格的 Markdown，结构必须如下（不要输出 JS
 5. 全文使用中文，控制在 1200-2200 字。"""
 
 
-def build_intake_prompt(request: str, recent: list[dict], feedback: str = "") -> str:
+def build_intake_prompt(request: str, recent: list[dict], feedback: str = "", memory_context: str = "") -> str:
     today = date.today().isoformat()
     context = ""
     if recent:
@@ -63,8 +63,13 @@ def build_intake_prompt(request: str, recent: list[dict], feedback: str = "") ->
             [r["brief"] for r in recent], ensure_ascii=False
         )
     extra = f"\n上一次用户驳回并给出的修改意见：{feedback}\n" if feedback else ""
+    memory_block = (
+        f"\n同一会话的短期记忆（用于理解“改成3天”这类追问）：\n{memory_context}\n"
+        if memory_context
+        else ""
+    )
     return f"""今天是 {today}。从用户需求中提取旅行信息。
-用户需求：{request}{extra}{context}
+用户需求：{request}{extra}{context}{memory_block}
 
 规则：
 - 用户没说的字段不要编造：出发地填“未指定”，预算填 null，日期填 null。
@@ -123,4 +128,5 @@ def plan_is_valid(md: str, days: int | None = None) -> bool:
     if days and days <= 10 and day_numbers != list(range(1, days + 1)):
         return False
     return "|" in md
+
 

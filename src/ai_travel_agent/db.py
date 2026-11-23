@@ -1,4 +1,4 @@
-"""SQLite storage for auth, trips and RAG chunks. One file, no external service."""
+"""SQLite storage for users, long-term trips and RAG chunks."""
 
 import json
 import sqlite3
@@ -40,12 +40,6 @@ def init_db() -> None:
                 created_at TEXT NOT NULL,
                 last_login TEXT NOT NULL
             );
-            CREATE TABLE IF NOT EXISTS otp (
-                phone TEXT PRIMARY KEY,
-                code_hash TEXT NOT NULL,
-                expires_at REAL NOT NULL,
-                created_at REAL NOT NULL
-            );
             CREATE TABLE IF NOT EXISTS trips (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id TEXT NOT NULL,
@@ -81,26 +75,6 @@ def upsert_user(phone: str) -> bool:
             (phone, now, now),
         )
         return True
-
-
-def save_otp(phone: str, code_hash: str, expires_at: float, created_at: float) -> None:
-    with _lock, connect() as conn:
-        conn.execute(
-            "INSERT INTO otp(phone, code_hash, expires_at, created_at) VALUES (?, ?, ?, ?) "
-            "ON CONFLICT(phone) DO UPDATE SET code_hash=excluded.code_hash, "
-            "expires_at=excluded.expires_at, created_at=excluded.created_at",
-            (phone, code_hash, expires_at, created_at),
-        )
-
-
-def get_otp(phone: str):
-    with connect() as conn:
-        return conn.execute("SELECT * FROM otp WHERE phone=?", (phone,)).fetchone()
-
-
-def delete_otp(phone: str) -> None:
-    with _lock, connect() as conn:
-        conn.execute("DELETE FROM otp WHERE phone=?", (phone,))
 
 
 def save_trip(user_id: str, thread_id: str, brief: dict, plan: str) -> None:

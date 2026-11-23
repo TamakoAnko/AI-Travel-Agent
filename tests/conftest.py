@@ -4,7 +4,7 @@ from pathlib import Path
 os.environ["EMBED_PROVIDER"] = "hash"
 os.environ["DATABASE_PATH"] = "data/test_app.db"
 os.environ["CHECKPOINT_PATH"] = "data/test_checkpoints.db"
-os.environ.setdefault("APP_SECRET", "test-secret")
+os.environ["REDIS_FAKE"] = "1"
 
 import pytest
 
@@ -24,3 +24,11 @@ def cleanup_test_db():
     _remove_db_files()
     yield
     _remove_db_files()
+
+
+@pytest.fixture(autouse=True)
+def clean_redis():
+    from ai_travel_agent.memory import get_redis
+
+    get_redis().flushall()
+    yield

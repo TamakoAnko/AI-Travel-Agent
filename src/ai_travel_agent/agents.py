@@ -11,6 +11,7 @@ from langgraph.types import Send, interrupt
 
 from . import db
 from .config import settings
+from .memory import ShortTermMemory
 from .models import TripBrief
 from .prompts import SPECIALIST_PROMPTS, build_compose_prompt, build_intake_prompt, plan_is_valid
 from .tools import TOOL_MAP, knowledge_tool, weather_tool, web_search_tool
@@ -80,9 +81,17 @@ def heuristic_brief(request: str) -> TripBrief:
     )
 
 
-def extract_brief(request: str, user_id: str, feedback: str = "") -> TripBrief:
+def extract_brief(
+    request: str, user_id: str, feedback: str = "", thread_id: str = ""
+) -> TripBrief:
     recent = db.recent_trips(user_id, limit=2)
-    prompt = build_intake_prompt(request, recent, feedback)
+    memory_context = ""
+    if thread_id:
+        try:
+            memory_context = ShortTermMemory(thread_id).context(exclude_last_user=request)
+        except Exception as exc:
+            logger.warning("短期记忆读取失败: %s", exc)
+    prompt = build_intake_prompt(request, recent, feedback, memory_context)
     messages = [SystemMessage(content="你是旅行需求结构化专家。"), HumanMessage(content=prompt)]
     try:
         structured = _llm(settings.supervisor_model, 0.1).with_structured_output(TripBrief)
@@ -101,7 +110,12 @@ def extract_brief(request: str, user_id: str, feedback: str = "") -> TripBrief:
 
 
 def intake_node(state: dict) -> dict:
-    brief = extract_brief(state["request"], state.get("user_id", ""), state.get("feedback", ""))
+    brief = extract_brief(
+        state["request"],
+        state.get("user_id", ""),
+        state.get("feedback", ""),
+        state.get("thread_id", ""),
+    )
     return {
         "brief": brief.model_dump(),
         "stage": "trip_review",
@@ -233,6 +247,7 @@ def finalize_node(state: dict) -> dict:
     except Exception as exc:
         logger.warning("保存行程失败: %s", exc)
     return {"stage": "done", "final": state.get("plan", "")}
+
 
 
 

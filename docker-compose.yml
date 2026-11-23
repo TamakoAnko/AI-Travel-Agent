@@ -1,4 +1,17 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: travel-agent-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   backend:
     build: .
     container_name: travel-agent-backend
@@ -7,12 +20,18 @@ services:
       DATABASE_PATH: /app/data/app.db
       CHECKPOINT_PATH: /app/data/checkpoints.db
       KNOWLEDGE_DIR: /app/data/knowledge
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
       HOST: 0.0.0.0
       PORT: "8000"
     volumes:
       - ./data:/app/data
     ports:
       - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
@@ -31,3 +50,6 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+
+volumes:
+  redis_data:

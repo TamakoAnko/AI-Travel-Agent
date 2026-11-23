@@ -17,9 +17,10 @@ def test_health_and_status():
         health = client.get("/api/health")
         assert health.status_code == 200
         assert health.json()["status"] == "healthy"
+        assert health.json()["services"]["redis"] is True
         status = client.get("/api/status")
         assert status.status_code == 200
-        assert "deepseek" in status.json()
+        assert status.json()["redis"] is True
 
 
 def test_auth_flow_and_rag_search():
@@ -35,6 +36,17 @@ def test_auth_flow_and_rag_search():
         )
         assert rag.status_code == 200
         assert rag.json()["results"]
+
+
+def test_logout_endpoint_revokes_token():
+    with TestClient(app) as client:
+        token = auth_token(client, "13900000006")
+        resp = client.post(
+            "/api/auth/logout", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert resp.status_code == 200
+        me = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+        assert me.status_code == 401
 
 
 def test_stream_requires_auth():

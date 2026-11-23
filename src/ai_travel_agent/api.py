@@ -5,7 +5,7 @@ import json
 import logging
 from contextlib import AsyncExitStack, asynccontextmanager
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
@@ -16,6 +16,7 @@ from . import auth, db
 from .agents import _text
 from .config import settings
 from .graph import build_graph
+from .memory import ShortTermMemory, check_redis
 from .models import (
     ApproveRequest,
     GeocodeBatchRequest,
@@ -34,6 +35,10 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db.init_db()
+    if check_redis():
+        logger.info("Redis: 连接成功")
+    else:
+        logger.warning("Redis: 不可用，登录和短期记忆将不可用")
     try:
         kb = get_kb()
         await asyncio.to_thread(kb.ensure_seed)
@@ -153,10 +158,16 @@ async def _stream_events(graph, graph_input, config: dict, request: Request):
         return
     plan = (state.values or {}).get("plan", "")
     if plan:
+        thread_id = (config.get("configurable") or {}).get("thread_id")
+        try:
+            mem = ShortTermMemory(thread_id)
+            await asyncio.to_thread(mem.append, "assistant", plan)
+            await asyncio.to_thread(mem.compress_if_needed)
+        except Exception as exc:
+            logger.warning("短期记忆写入/压缩失败: %s", exc)
         # 完成一轮后只保留最新 checkpoint，避免每个节点快照都堆在 SQLite 里
         try:
             checkpointer = getattr(graph, "checkpointer", None)
-            thread_id = (config.get("configurable") or {}).get("thread_id")
             if checkpointer and thread_id and hasattr(checkpointer, "aprune"):
                 await checkpointer.aprune([thread_id], strategy="keep_latest")
         except Exception as exc:
@@ -176,6 +187,8 @@ async def health():
             "deepseek": bool(settings.deepseek_api_key),
             "tavily": bool(settings.tavily_api_key),
             "baidu_map": bool(settings.baidu_map_api_key),
+            "redis": check_redis(),
+            "short_term": check_redis(),
             "rag": kb.count() > 0,
             "embedding": kb.embedder.name,
         },
@@ -192,9 +205,10 @@ async def status():
         "rag": kb.count() > 0,
         "checkpoint": True,
         "memory": True,
+        "short_term": check_redis(),
         "embedding": kb.embedder.name,
         # 兼容复用前端的设置抽屉字段（语义分别是：会话记忆/用户画像/语义检索）
-        "redis": True,
+        "redis": check_redis(),
         "mysql": True,
         "milvus": kb.count() > 0,
     }
@@ -223,7 +237,8 @@ async def me(current_user: str = Depends(auth.require_auth)):
 
 
 @app.post("/api/auth/logout")
-async def logout():
+async def logout(authorization: str = Header("")):
+    auth.logout(authorization)
     return {"status": "ok"}
 
 
@@ -268,8 +283,15 @@ async def stream(
     graph = request.app.state.graph
     config = _config(thread_id)
     state = await graph.aget_state(config)
+    if state.values and state.values.get("user_id") != current_user:
+        raise HTTPException(403, "无权访问该会话")
     if state.values and state.next:
         raise HTTPException(409, "该会话还有未处理的审批，请先确认或驳回")
+
+    try:
+        await asyncio.to_thread(ShortTermMemory(thread_id).append, "user", message)
+    except Exception as exc:
+        logger.warning("写入短期记忆失败: %s", exc)
 
     initial = {
         "messages": [HumanMessage(content=message)],
@@ -309,6 +331,14 @@ async def resume(
         raise HTTPException(403, "无权访问该会话")
     if not state.next:
         raise HTTPException(409, "该会话没有待处理的审批")
+
+    if action == "reject" and feedback:
+        try:
+            await asyncio.to_thread(
+                ShortTermMemory(thread_id).append, "user", f"修改意见：{feedback}"
+            )
+        except Exception as exc:
+            logger.warning("写入短期记忆失败: %s", exc)
 
     resume_value = {"action": action, "feedback": feedback if action == "reject" else ""}
     return StreamingResponse(
