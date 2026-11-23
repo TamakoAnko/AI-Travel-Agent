@@ -1,0 +1,7 @@
+[
+  {"id": "paris", "destination": "巴黎", "request": "上海出发，5天巴黎旅行，预算15000元，喜欢艺术和美食"},
+  {"id": "tokyo", "destination": "东京", "request": "4天东京旅行，预算12000元，喜欢动漫和街头小吃"},
+  {"id": "bangkok", "destination": "曼谷", "request": "广州出发，5天曼谷，预算8000元，想逛夜市和寺庙"},
+  {"id": "rome", "destination": "罗马", "request": "6天罗马和梵蒂冈，预算20000元，喜欢历史和建筑"},
+  {"id": "beijing", "destination": "北京", "request": "3天北京，预算5000元，第一次来，想看故宫和长城"}
+]

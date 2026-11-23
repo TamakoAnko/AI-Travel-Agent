@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from ai-travel-agent!")
+__version__ = "0.1.0"
