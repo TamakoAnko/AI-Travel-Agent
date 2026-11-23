@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Voyage · 旅行规划</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z'/></svg>"
+    />
+  </head>
+  <body>
+    <div id="app"></div>
+    <!-- 百度地图 JavaScript API GL：必须同步引入（SDK 内部使用 document.write 加载子资源，
+         动态异步插入会被浏览器阻断），%VITE_BAIDU_MAP_AK% 由 Vite 从 frontend/.env 注入 -->
+    <script src="https://api.map.baidu.com/api?type=webgl&v=1.0&ak=%VITE_BAIDU_MAP_AK%"></script>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
