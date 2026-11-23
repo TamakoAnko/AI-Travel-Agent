@@ -31,3 +31,6 @@ Thumbs.db
 .npm-cache/
 data/*.db
 data/*.db-*
+
+# Local SSH key for pushing this repo
+.ssh/
