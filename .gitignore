@@ -29,6 +29,7 @@ frontend/.env.local
 Thumbs.db
 .uv-cache/
 .npm-cache/
+logs/
 data/*.db
 data/*.db-*
 

@@ -294,13 +294,8 @@ export default {
       this.view = "home";
     },
     goPlan() {
-      if (this.viewedTrip || this.hasTrip) {
-        this.view = "plan";
-      } else if (this.messages.length) {
-        this.view = "chat";
-      } else {
-        this.view = "home";
-      }
+      // 没有当前行程时进对话页开始规划，而不是悄悄退回灵感首页
+      this.view = (this.viewedTrip || this.hasTrip) ? "plan" : "chat";
     },
     goSaved() {
       this.view = "saved";

@@ -166,6 +166,8 @@ docker compose up -d --build
 | POST | `/api/rag/search` | 调试知识库检索 |
 | POST | `/api/baidu/geocode-batch` | 批量地理编码（地图打点） |
 | POST | `/api/feedback/{thread_id}` | 用户反馈 |
+| GET | `/api/trips` | 当前账号已保存的行程列表 |
+| DELETE | `/api/trips/{trip_id}` | 删除自己的行程（非本人返回 404） |
 
 ## 工作流
 

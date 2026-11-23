@@ -77,12 +77,13 @@ def upsert_user(phone: str) -> bool:
         return True
 
 
-def save_trip(user_id: str, thread_id: str, brief: dict, plan: str) -> None:
+def save_trip(user_id: str, thread_id: str, brief: dict, plan: str) -> int:
     with _lock, connect() as conn:
-        conn.execute(
+        cur = conn.execute(
             "INSERT INTO trips(user_id, thread_id, brief, plan, created_at) VALUES (?, ?, ?, ?, ?)",
             (user_id, thread_id, json.dumps(brief, ensure_ascii=False), plan, utc_now()),
         )
+        return int(cur.lastrowid)
 
 
 def recent_trips(user_id: str, limit: int = 3) -> list[dict]:
@@ -95,3 +96,25 @@ def recent_trips(user_id: str, limit: int = 3) -> list[dict]:
         {"brief": json.loads(r["brief"]), "plan": r["plan"], "created_at": r["created_at"]}
         for r in rows
     ]
+
+def list_trips(user_id: str, limit: int = 50) -> list[dict]:
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT id, brief, plan, created_at FROM trips WHERE user_id=? ORDER BY id DESC LIMIT ?",
+            (user_id, limit),
+        ).fetchall()
+    return [
+        {
+            "id": r["id"],
+            "brief": json.loads(r["brief"]),
+            "plan": r["plan"],
+            "created_at": r["created_at"],
+        }
+        for r in rows
+    ]
+
+
+def delete_trip(user_id: str, trip_id: int) -> bool:
+    with _lock, connect() as conn:
+        cur = conn.execute("DELETE FROM trips WHERE id=? AND user_id=?", (trip_id, user_id))
+        return cur.rowcount > 0

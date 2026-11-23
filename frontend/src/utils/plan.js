@@ -579,3 +579,47 @@ export function removeSavedTrip(id) {
 export function isTripSaved(raw) {
   return getSavedTrips().some((t) => t.raw === raw);
 }
+
+// ── 账号行程（后端 SQLite，登录后跨设备可见）──
+function authHeaders() {
+  const token = localStorage.getItem("travel_token") || "";
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+const SERVER_API_BASE = import.meta.env?.VITE_API_BASE || "";
+
+// 后端存的是 plan 原文，这里转成卡片结构；请求失败返回空数组，降级到本地缓存
+export async function fetchServerTrips() {
+  if (!localStorage.getItem("travel_token")) return [];
+  try {
+    const res = await fetch(`${SERVER_API_BASE}/api/trips`, { headers: authHeaders() });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.items || []).map((t) => {
+      const parsed = parsePlan(t.plan) || {};
+      const city = parsed.city || (t.brief && t.brief.destination) || "";
+      return {
+        id: `srv-${t.id}`,
+        serverId: t.id,
+        title: `${city || "行程"}${parsed.duration ? " · " + parsed.duration + "天" : ""}`,
+        city,
+        createdAt: Date.parse(t.created_at) || 0,
+        raw: t.plan,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteServerTrip(serverId) {
+  try {
+    const res = await fetch(`${SERVER_API_BASE}/api/trips/${serverId}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}

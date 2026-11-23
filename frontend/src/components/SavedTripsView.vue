@@ -3,7 +3,7 @@
     <div class="section-head">
       <div>
         <h2>我的旅行</h2>
-        <p>保存的行程会保存在当前浏览器中</p>
+        <p>行程保存在你的账号中，换设备登录也能看到</p>
       </div>
     </div>
 
@@ -19,7 +19,7 @@
         <div class="trip-body">
           <div class="trip-title-row">
             <h4>{{ trip.title }}</h4>
-            <button class="trip-del" title="删除" @click="remove(trip.id)">
+            <button class="trip-del" title="删除" @click="remove(trip)">
               <BaseIcon name="trash" :size="14" />
             </button>
           </div>
@@ -49,7 +49,7 @@
 
 <script>
 import BaseIcon from "./BaseIcon.vue";
-import { getSavedTrips, removeSavedTrip, getCityVisual } from "../utils/plan.js";
+import { getSavedTrips, removeSavedTrip, getCityVisual, fetchServerTrips, deleteServerTrip } from "../utils/plan.js";
 
 export default {
   name: "SavedTripsView",
@@ -59,9 +59,17 @@ export default {
       trips: getSavedTrips(),
     };
   },
+  async mounted() {
+    await this.refresh();
+  },
   methods: {
-    refresh() {
-      this.trips = getSavedTrips();
+    // 账号行程 + 本机缓存合并（同一份 plan 以服务端为准）
+    async refresh() {
+      const local = getSavedTrips();
+      const remote = await fetchServerTrips();
+      const seen = new Set(remote.map((t) => t.raw));
+      this.trips = [...remote, ...local.filter((t) => !seen.has(t.raw))]
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     },
     tone(city) {
       const v = getCityVisual(city);
@@ -72,9 +80,14 @@ export default {
       const d = new Date(ts);
       return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
     },
-    remove(id) {
-      removeSavedTrip(id);
-      this.refresh();
+    async remove(trip) {
+      if (trip.serverId) await deleteServerTrip(trip.serverId);
+      removeSavedTrip(trip.id);
+      // 同一份行程可能还有本地缓存副本，一并清掉
+      getSavedTrips()
+        .filter((t) => t.raw === trip.raw)
+        .forEach((t) => removeSavedTrip(t.id));
+      await this.refresh();
     },
     view(trip) {
       this.$emit("view-trip", trip);

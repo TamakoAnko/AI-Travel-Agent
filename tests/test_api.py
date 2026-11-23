@@ -53,3 +53,26 @@ def test_stream_requires_auth():
     with TestClient(app) as client:
         resp = client.get("/api/stream/t1", params={"message": "巴黎5天"})
         assert resp.status_code == 401
+
+
+def test_trips_list_and_delete():
+    from ai_travel_agent import db
+
+    with TestClient(app) as client:
+        token = auth_token(client, "13900000009")
+        headers = {"Authorization": f"Bearer {token}"}
+        trip_id = db.save_trip("13900000009", "th-trips", {"destination": "京都"}, "# 京都 3 天行程")
+
+        items = client.get("/api/trips", headers=headers).json()["items"]
+        assert [i["id"] for i in items] == [trip_id]
+        assert "京都" in items[0]["plan"]
+
+        other = auth_token(client, "13900000010")
+        denied = client.delete(
+            f"/api/trips/{trip_id}", headers={"Authorization": f"Bearer {other}"}
+        )
+        assert denied.status_code == 404
+
+        assert client.delete(f"/api/trips/{trip_id}", headers=headers).status_code == 200
+        assert client.get("/api/trips", headers=headers).json()["items"] == []
+        assert client.get("/api/trips").status_code == 401

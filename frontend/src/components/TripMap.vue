@@ -191,7 +191,7 @@ import { CITY_CENTERS, CN_CITIES, getSpotCoords, getSpotCoordInfo } from "../uti
 const W = 800;
 const H = 520;
 const DAY_PALETTE = ["#2563eb", "#0d9488", "#b45309", "#7c3aed", "#be185d"];
-// SDK 已在 index.html 中同步引入（见 frontend/index.html），ak 由 Vite 从 frontend/.env 注入
+// SDK 已在 index.html 中同步引入（见 frontend/index.html），ak 由 Vite 从根目录 .env 注入
 const SDK_POLL_MS = 2000;
 const SDK_POLL_LIMIT = 5;
 
