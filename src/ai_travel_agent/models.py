@@ -13,6 +13,15 @@ def merge_research(left: list[dict] | None, right: list[dict] | None) -> list[di
     return (left or []) + right
 
 
+MAX_MESSAGES = 20
+
+
+def keep_recent_messages(left: list | None, right: list | None) -> list:
+    """Keep the checkpoint small: only the latest 20 messages are retained."""
+    merged = add_messages(left or [], right or [])
+    return merged[-MAX_MESSAGES:]
+
+
 class TripBrief(BaseModel):
     origin: str = Field("未指定", description="出发城市，未提及则填未指定")
     destination: str = Field(..., description="目的地城市")
@@ -49,7 +58,7 @@ class RAGSearchRequest(BaseModel):
 
 
 class TravelState(TypedDict):
-    messages: Annotated[list[BaseMessage], add_messages]
+    messages: Annotated[list[BaseMessage], keep_recent_messages]
     user_id: str
     thread_id: str
     request: str
@@ -59,4 +68,5 @@ class TravelState(TypedDict):
     plan: str
     final: str
     stage: str
+
 

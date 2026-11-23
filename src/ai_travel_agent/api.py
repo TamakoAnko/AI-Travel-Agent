@@ -153,6 +153,14 @@ async def _stream_events(graph, graph_input, config: dict, request: Request):
         return
     plan = (state.values or {}).get("plan", "")
     if plan:
+        # 完成一轮后只保留最新 checkpoint，避免每个节点快照都堆在 SQLite 里
+        try:
+            checkpointer = getattr(graph, "checkpointer", None)
+            thread_id = (config.get("configurable") or {}).get("thread_id")
+            if checkpointer and thread_id and hasattr(checkpointer, "aprune"):
+                await checkpointer.aprune([thread_id], strategy="keep_latest")
+        except Exception as exc:
+            logger.warning("checkpoint 清理失败: %s", exc)
         yield _sse({"type": "complete", "content": plan})
     else:
         yield _sse({"type": "error", "content": "流程结束但没有生成计划"})
@@ -308,5 +316,6 @@ async def resume(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
 
 

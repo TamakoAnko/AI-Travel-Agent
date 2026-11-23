@@ -106,7 +106,6 @@ def intake_node(state: dict) -> dict:
         "brief": brief.model_dump(),
         "stage": "trip_review",
         "research": [{"_reset": True}],
-        "messages": [HumanMessage(content=state["request"])],
     }
 
 
@@ -234,5 +233,6 @@ def finalize_node(state: dict) -> dict:
     except Exception as exc:
         logger.warning("保存行程失败: %s", exc)
     return {"stage": "done", "final": state.get("plan", "")}
+
 
 
