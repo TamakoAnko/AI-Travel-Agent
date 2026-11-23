@@ -115,7 +115,7 @@ npm install
 npm run dev
 ```
 
-打开 <http://localhost:3000>，输入任意合法手机号，点击发送验证码。开发模式会在页面上直接显示 6 位验证码。
+打开 <http://localhost:3000>，输入任意合法手机号，点击发送验证码。开发模式会在页面上直接显示 6 位验证码。\n\n地图为可选功能：复制 `frontend/.env.example` 为 `frontend/.env`，填入 `VITE_BAIDU_MAP_AK`；不填也能正常生成行程，只是底图不可用。
 
 ## Docker 启动
 
@@ -240,4 +240,5 @@ uv run pytest -q
 ## License
 
 MIT
+
 
