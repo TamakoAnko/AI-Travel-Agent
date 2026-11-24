@@ -77,3 +77,15 @@ def test_trips_list_and_delete():
         assert client.delete(f"/api/trips/{trip_id}", headers=headers).status_code == 200
         assert client.get("/api/trips", headers=headers).json()["items"] == []
         assert client.get("/api/trips").status_code == 401
+
+
+def test_save_trip_keeps_latest_per_thread():
+    from ai_travel_agent import db
+
+    db.init_db()
+    db.save_trip("13900000011", "th-dup", {"destination": "巴黎"}, "# 旧行程")
+    db.save_trip("13900000011", "th-dup", {"destination": "巴黎"}, "# 新行程")
+
+    items = db.list_trips("13900000011")
+    assert len(items) == 1
+    assert "新行程" in items[0]["plan"]

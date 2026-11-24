@@ -79,6 +79,11 @@ def upsert_user(phone: str) -> bool:
 
 def save_trip(user_id: str, thread_id: str, brief: dict, plan: str) -> int:
     with _lock, connect() as conn:
+        # 同一会话只保留最新一版：修改需求重出计划时覆盖旧行程
+        if thread_id:
+            conn.execute(
+                "DELETE FROM trips WHERE user_id=? AND thread_id=?", (user_id, thread_id)
+            )
         cur = conn.execute(
             "INSERT INTO trips(user_id, thread_id, brief, plan, created_at) VALUES (?, ?, ?, ?, ?)",
             (user_id, thread_id, json.dumps(brief, ensure_ascii=False), plan, utc_now()),
