@@ -16,6 +16,7 @@ from . import auth, db
 from .agents import _text
 from .config import settings
 from .graph import build_graph
+from . import memory
 from .memory import ShortTermMemory, check_redis
 from .models import (
     ApproveRequest,
@@ -253,6 +254,58 @@ async def feedback(thread_id: str, payload: FeedbackRequest, current_user: str =
     return {"status": "ok"}
 
 
+async def _owns_thread(graph, user: str, thread_id: str) -> bool:
+    if thread_id in memory.list_thread_ids(user):
+        return True
+    try:
+        state = await graph.aget_state({"configurable": {"thread_id": thread_id}})
+    except Exception:
+        return False
+    return (state.values or {}).get("user_id") == user
+
+
+@app.get("/api/threads")
+async def threads(request: Request, current_user: str = Depends(auth.require_auth)):
+    items = await asyncio.to_thread(memory.thread_summaries, memory.list_thread_ids(current_user))
+    known = {i["thread_id"] for i in items}
+    graph = request.app.state.graph
+    # 兼容旧数据：没登记进索引的对话，按 checkpoint 里的 user_id 归属
+    for tid in await asyncio.to_thread(memory.all_memory_threads):
+        if tid in known:
+            continue
+        if await _owns_thread(graph, current_user, tid):
+            items.extend(await asyncio.to_thread(memory.thread_summaries, [tid]))
+    items.sort(key=lambda x: x["updated_at"], reverse=True)
+    return {"items": items}
+
+
+@app.get("/api/threads/{thread_id}/messages")
+async def thread_messages(
+    thread_id: str, request: Request, current_user: str = Depends(auth.require_auth)
+):
+    if not await _owns_thread(request.app.state.graph, current_user, thread_id):
+        raise HTTPException(404, "对话不存在")
+    messages = await asyncio.to_thread(ShortTermMemory(thread_id).load)
+    return {"thread_id": thread_id, "messages": messages}
+
+
+@app.delete("/api/threads/{thread_id}")
+async def delete_thread(
+    thread_id: str, request: Request, current_user: str = Depends(auth.require_auth)
+):
+    if not await _owns_thread(request.app.state.graph, current_user, thread_id):
+        raise HTTPException(404, "对话不存在")
+    await asyncio.to_thread(memory.forget_thread, current_user, thread_id)
+    await asyncio.to_thread(memory.clear_thread, thread_id)
+    checkpointer = getattr(request.app.state.graph, "checkpointer", None)
+    if checkpointer is not None and hasattr(checkpointer, "adelete_thread"):
+        try:
+            await checkpointer.adelete_thread(thread_id)
+        except Exception as exc:
+            logger.warning("删除 checkpoint 失败: %s", exc)
+    return {"status": "ok"}
+
+
 @app.get("/api/trips")
 async def trips(current_user: str = Depends(auth.require_auth)):
     return {"items": await asyncio.to_thread(db.list_trips, current_user)}
@@ -301,6 +354,7 @@ async def stream(
         raise HTTPException(409, "该会话还有未处理的审批，请先确认或驳回")
 
     try:
+        await asyncio.to_thread(memory.remember_thread, current_user, thread_id)
         await asyncio.to_thread(ShortTermMemory(thread_id).append, "user", message)
     except Exception as exc:
         logger.warning("写入短期记忆失败: %s", exc)

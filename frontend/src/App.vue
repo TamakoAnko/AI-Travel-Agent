@@ -29,6 +29,7 @@
             <button :class="['nav-item', view === 'plan' ? 'active' : '']" @click="goPlan">行程</button>
             <button :class="['nav-item', view === 'home' ? 'active' : '']" @click="goHome">灵感</button>
             <button :class="['nav-item', view === 'saved' ? 'active' : '']" @click="goSaved">我的旅行</button>
+            <button :class="['nav-item', view === 'history' ? 'active' : '']" @click="goHistory">历史对话</button>
             <button class="nav-item" @click="showHelp = true">帮助</button>
           </nav>
 
@@ -51,6 +52,7 @@
             <button :class="['mobile-nav-item', view === 'plan' ? 'active' : '']" @click="goPlan(); mobileMenu = false">行程</button>
             <button :class="['mobile-nav-item', view === 'home' ? 'active' : '']" @click="goHome(); mobileMenu = false">灵感</button>
             <button :class="['mobile-nav-item', view === 'saved' ? 'active' : '']" @click="goSaved(); mobileMenu = false">我的旅行</button>
+            <button :class="['mobile-nav-item', view === 'history' ? 'active' : '']" @click="goHistory(); mobileMenu = false">历史对话</button>
             <button class="mobile-nav-item" @click="showHelp = true; mobileMenu = false">帮助</button>
             <button class="mobile-nav-item" @click="showSettings = true; mobileMenu = false">设置</button>
           </nav>
@@ -98,6 +100,13 @@
           @approve="handleApprove"
           @reject="handleReject"
           @feedback="submitFeedback"
+        />
+
+        <!-- 历史对话 -->
+        <HistoryView
+          v-else-if="view === 'history'"
+          @open="openThread"
+          @go-home="goHome"
         />
 
         <!-- 我的旅行 -->
@@ -166,8 +175,10 @@ import HomeHero from "./components/HomeHero.vue";
 import ChatView from "./components/ChatView.vue";
 import PlanView from "./components/PlanView.vue";
 import SavedTripsView from "./components/SavedTripsView.vue";
+import HistoryView from "./components/HistoryView.vue";
 import SettingsDrawer from "./components/SettingsDrawer.vue";
 import { parsePlan, saveTrip, removeSavedTrip, getSavedTrips, fetchServerTrips } from "./utils/plan.js";
+import { fetchThreadMessages } from "./utils/threads.js";
 import { sanitizeJson } from "./utils/markdown.js";
 
 // crypto.randomUUID 仅在安全上下文（HTTPS/localhost）可用；
@@ -190,6 +201,7 @@ export default {
     ChatView,
     PlanView,
     SavedTripsView,
+    HistoryView,
     SettingsDrawer,
   },
   data() {
@@ -314,6 +326,24 @@ export default {
     },
     goSaved() {
       this.view = "saved";
+    },
+    goHistory() {
+      this.view = "history";
+    },
+    async openThread(t) {
+      const messages = await fetchThreadMessages(t.thread_id);
+      if (!messages.length) {
+        this._toast("这个对话的内容已过期");
+        return;
+      }
+      this.clearChat();
+      this.sessionId = t.thread_id;
+      this.messages = messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+        _thinkingDone: true,
+      }));
+      this.view = "chat";
     },
     newTrip() {
       this.viewedTrip = null;
@@ -1139,6 +1169,7 @@ export default {
       }
     },
     clearChat() {
+      this.viewedTrip = null; // 清空会话时同时丢掉"正在查看的历史行程"，避免显示错乱
       this.messages = [];
       this.sessionId = null;
       this.approvalPending = false;

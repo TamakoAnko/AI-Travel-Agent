@@ -180,3 +180,65 @@ class ShortTermMemory:
             "短期记忆压缩 thread=%s: %s 条 -> %s 条", self.thread_id, total, keep
         )
         return True
+
+
+# ── 会话索引：每个用户名下有哪些 thread（用于「历史对话」页）──
+THREADS_KEY = "travel:threads:{user_id}"
+THREADS_TTL = 90 * 24 * 3600
+
+
+def remember_thread(user_id: str, thread_id: str) -> None:
+    if not user_id or not thread_id:
+        return
+    r = get_redis()
+    key = THREADS_KEY.format(user_id=user_id)
+    r.zadd(key, {thread_id: time.time()})
+    r.expire(key, THREADS_TTL)
+
+
+def list_thread_ids(user_id: str, limit: int = 50) -> list[str]:
+    if not user_id:
+        return []
+    return get_redis().zrevrange(THREADS_KEY.format(user_id=user_id), 0, limit - 1)
+
+
+def forget_thread(user_id: str, thread_id: str) -> None:
+    get_redis().zrem(THREADS_KEY.format(user_id=user_id), thread_id)
+
+
+def all_memory_threads(limit: int = 200) -> list[str]:
+    """扫描 Redis 里所有对话，兼容没有登记进索引的历史数据。"""
+    out: list[str] = []
+    for key in get_redis().scan_iter(match="travel:chat:*:messages", count=100):
+        parts = str(key).split(":")
+        if len(parts) >= 4 and parts[-1] == "messages":
+            out.append(":".join(parts[2:-1]))
+        if len(out) >= limit:
+            break
+    return out
+
+
+def thread_summaries(thread_ids: list[str]) -> list[dict]:
+    items = []
+    for tid in thread_ids:
+        messages = ShortTermMemory(tid).load()
+        if not messages:
+            continue
+        first_user = next(
+            (m.get("content") or "" for m in messages if m.get("role") == "user"), "新对话"
+        )
+        items.append(
+            {
+                "thread_id": tid,
+                "title": " ".join(first_user.split())[:40] or "新对话",
+                "message_count": len(messages),
+                "updated_at": messages[-1].get("ts") or 0,
+            }
+        )
+    items.sort(key=lambda x: x["updated_at"], reverse=True)
+    return items
+
+
+def clear_thread(thread_id: str) -> None:
+    r = get_redis()
+    r.delete(f"travel:chat:{thread_id}:messages", f"travel:chat:{thread_id}:summary")

@@ -89,3 +89,33 @@ def test_save_trip_keeps_latest_per_thread():
     items = db.list_trips("13900000011")
     assert len(items) == 1
     assert "新行程" in items[0]["plan"]
+
+
+def test_thread_history_list_messages_and_delete():
+    from ai_travel_agent.memory import ShortTermMemory, remember_thread
+
+    with TestClient(app) as client:
+        token = auth_token(client, "13900000013")
+        headers = {"Authorization": f"Bearer {token}"}
+        mem = ShortTermMemory("hist-1")
+        mem.append("user", "我想去上海玩5天")
+        mem.append("assistant", "# 上海 5 天行程")
+        remember_thread("13900000013", "hist-1")
+
+        items = client.get("/api/threads", headers=headers).json()["items"]
+        assert items and items[0]["thread_id"] == "hist-1"
+        assert "上海" in items[0]["title"]
+        assert items[0]["message_count"] == 2
+        assert items[0]["updated_at"] > 0
+
+        msgs = client.get("/api/threads/hist-1/messages", headers=headers).json()["messages"]
+        assert [m["role"] for m in msgs] == ["user", "assistant"]
+
+        other = auth_token(client, "13900000014")
+        other_headers = {"Authorization": f"Bearer {other}"}
+        assert client.get("/api/threads/hist-1/messages", headers=other_headers).status_code == 404
+        assert client.delete("/api/threads/hist-1", headers=other_headers).status_code == 404
+
+        assert client.delete("/api/threads/hist-1", headers=headers).status_code == 200
+        assert client.get("/api/threads", headers=headers).json()["items"] == []
+        assert client.get("/api/threads").status_code == 401

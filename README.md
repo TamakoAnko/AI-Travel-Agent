@@ -11,6 +11,7 @@
 - **Human-in-the-Loop**：行程信息确认、最终方案审批两次中断，支持驳回后带反馈重规划
 - **流式输出**：SSE 推送节点进度、子 Agent 结论和最终计划 token
 - **Redis 短期记忆**：按 thread 保存最近对话，达到上限自动压缩成滚动摘要，只保留最近 6 条
+- **历史对话**：每次新建行程都是独立 thread，可在「历史对话」页回看、接着聊或删除
 - **Redis 登录鉴权**：验证码、token 都存在 Redis，token 可注销，TTL 自动过期
 - **状态持久化**：LangGraph `AsyncSqliteSaver`，服务重启后可恢复 HITL 审批现场
 - **工具调用**：Tavily 实时搜索、Open-Meteo 天气、百度地图地理编码
@@ -166,6 +167,9 @@ docker compose up -d --build
 | POST | `/api/rag/search` | 调试知识库检索 |
 | POST | `/api/baidu/geocode-batch` | 批量地理编码（地图打点） |
 | POST | `/api/feedback/{thread_id}` | 用户反馈 |
+| GET | `/api/threads` | 当前账号的历史对话列表 |
+| GET | `/api/threads/{thread_id}/messages` | 读取某个对话的消息 |
+| DELETE | `/api/threads/{thread_id}` | 删除对话（记忆 + 断点） |
 | GET | `/api/trips` | 当前账号已保存的行程列表 |
 | DELETE | `/api/trips/{trip_id}` | 删除自己的行程（非本人返回 404） |
 
