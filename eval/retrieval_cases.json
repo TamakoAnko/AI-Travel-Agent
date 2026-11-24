@@ -1,0 +1,122 @@
+[
+  {
+    "query": "巴黎 11 月天气怎么样",
+    "source": "paris.md",
+    "section": "适合季节"
+  },
+  {
+    "query": "巴黎 博物馆需要提前预约吗",
+    "source": "paris.md",
+    "section": "实用提示"
+  },
+  {
+    "query": "巴黎 吃饭人均多少钱",
+    "source": "paris.md",
+    "section": "美食"
+  },
+  {
+    "query": "东京 樱花什么时候开",
+    "source": "tokyo.md",
+    "section": "适合季节"
+  },
+  {
+    "query": "东京 机场到市区怎么走",
+    "source": "tokyo.md",
+    "section": "交通"
+  },
+  {
+    "query": "东京 第一次去住哪个区域",
+    "source": "tokyo.md",
+    "section": "区域选择"
+  },
+  {
+    "query": "曼谷 什么时候去最舒服",
+    "source": "bangkok.md",
+    "section": "适合季节"
+  },
+  {
+    "query": "曼谷 从机场怎么进城",
+    "source": "bangkok.md",
+    "section": "交通"
+  },
+  {
+    "query": "罗马 斗兽场附近住哪里",
+    "source": "rome.md",
+    "section": "区域选择"
+  },
+  {
+    "query": "罗马 一天预算多少",
+    "source": "rome.md",
+    "section": "预算参考"
+  },
+  {
+    "query": "巴厘岛 雨季是几月",
+    "source": "bali.md",
+    "section": "适合季节"
+  },
+  {
+    "query": "巴厘岛 包车多少钱",
+    "source": "bali.md",
+    "section": "交通"
+  },
+  {
+    "query": "纽约 地铁怎么买票",
+    "source": "newyork.md",
+    "section": "交通"
+  },
+  {
+    "query": "北京 故宫要预约吗",
+    "source": "beijing.md",
+    "section": "实用提示"
+  },
+  {
+    "query": "上海 外滩夜景住哪",
+    "source": "shanghai.md",
+    "section": "区域选择"
+  },
+  {
+    "query": "上海 台风季节",
+    "source": "shanghai.md",
+    "section": "适合季节"
+  },
+  {
+    "query": "RER B 到巴黎市区要多久",
+    "source": "paris.md",
+    "section": "交通"
+  },
+  {
+    "query": "Navigo Easy 是什么",
+    "source": "paris.md",
+    "section": "交通"
+  },
+  {
+    "query": "Skyliner 到上野多长时间",
+    "source": "tokyo.md",
+    "section": "交通"
+  },
+  {
+    "query": "Suica 和 PASMO 怎么选",
+    "source": "tokyo.md",
+    "section": "交通"
+  },
+  {
+    "query": "Leonardo Express 到特米尼要多久",
+    "source": "rome.md",
+    "section": "交通"
+  },
+  {
+    "query": "OMNY 怎么用",
+    "source": "newyork.md",
+    "section": "交通"
+  },
+  {
+    "query": "Airport Rail Link 怎么进城",
+    "source": "bangkok.md",
+    "section": "交通"
+  },
+  {
+    "query": "磁悬浮到龙阳路怎么换乘",
+    "source": "shanghai.md",
+    "section": "交通"
+  }
+]

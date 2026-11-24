@@ -196,14 +196,32 @@ docker compose up -d --build
 
 ```text
 data/knowledge/*.md
-  → RecursiveCharacterTextSplitter(500/80)
+  → 按 Markdown 标题切主题，主题内再按 500/80 切块（8 篇 → 48 个片段）
+  → 每个片段带 city / section 元数据，embedding 时拼上「城市 主题」前缀
   → Embedding（DashScope / Ollama / hash）
   → SQLite rag_chunks
-  → 查询向量余弦相似度 top-k
-  → Itinerary Agent 上下文
+  → 城市过滤 → 向量 + BM25 双路召回 → RRF 排名融合 → top-k
+  → Itinerary Agent 上下文（带来源文件名）
 ```
 
 内置 8 个目的地的原创知识文档（巴黎、东京、曼谷、罗马、北京、上海、巴厘岛、纽约），无需额外准备数据即可体验。
+
+### 检索评测
+
+`eval/retrieval_cases.json` 有 24 条「问题 → 期望文档/章节」标注，`scripts/eval_rag.py` 计算文档召回、章节命中与 MRR：
+
+```powershell
+uv run python scripts/eval_rag.py --compare          # 向量 vs 混合
+uv run python scripts/eval_rag.py --mode vector --no-city
+```
+
+| 配置 | 文档 Recall@3 | 章节命中@3 |
+|---|---|---|
+| 纯向量，无城市过滤 | 0.875 | 0.875 |
+| 纯向量 + 城市过滤 | 1.000 | 0.958 |
+| 混合检索（BM25 + 向量 + RRF）+ 城市过滤 | 1.000 | 1.000 |
+
+向量检索对 `Navigo Easy`、`Suica`、`Airport Rail Link` 这类专有名词不敏感，混合检索补上了这一块。
 
 
 ## 记忆系统

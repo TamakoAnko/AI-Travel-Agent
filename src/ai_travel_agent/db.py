@@ -53,6 +53,8 @@ def init_db() -> None:
                 id TEXT PRIMARY KEY,
                 source TEXT NOT NULL,
                 chunk_index INTEGER NOT NULL,
+                city TEXT NOT NULL DEFAULT '',
+                section TEXT NOT NULL DEFAULT '',
                 content TEXT NOT NULL,
                 embedding TEXT NOT NULL,
                 model TEXT NOT NULL,
@@ -61,6 +63,13 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_rag_source ON rag_chunks(source);
             """
         )
+        # 旧库迁移：补 city / section 两列
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(rag_chunks)")}
+        for name in ("city", "section"):
+            if name not in cols:
+                conn.execute(
+                    f"ALTER TABLE rag_chunks ADD COLUMN {name} TEXT NOT NULL DEFAULT ''"
+                )
 
 
 def upsert_user(phone: str) -> bool:

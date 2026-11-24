@@ -85,9 +85,9 @@ def get_weather(city: str, start_date: str = "", days: int = 5) -> str:
         return f"天气查询失败：{exc}"
 
 
-def search_travel_knowledge(query: str, top_k: int = 4) -> str:
+def search_travel_knowledge(query: str, top_k: int = 4, city: str = "") -> str:
     try:
-        results = get_kb().search(query, top_k=top_k)
+        results = get_kb().search(query, top_k=top_k, city=city or None)
     except Exception as exc:
         logger.warning("知识库检索失败: %s", exc)
         return f"知识库暂不可用：{exc}"
@@ -95,7 +95,8 @@ def search_travel_knowledge(query: str, top_k: int = 4) -> str:
         return "知识库中没有找到相关内容。"
     blocks = [f"[知识库] {query}"]
     for item in results:
-        blocks.append(f"- 来源 {item['source']}（相似度 {item['score']}）\n  {item['content'][:500]}")
+        where = item["source"] + (f" · {item['section']}" if item.get("section") else "")
+        blocks.append(f"- 来源 {where}\n  {item['content'][:500]}")
     return "\n".join(blocks)
 
 
@@ -112,9 +113,9 @@ def weather_tool(city: str, days: int = 5) -> str:
 
 
 @tool
-def knowledge_tool(query: str) -> str:
-    """检索本地旅行知识库，获取目的地季节、区域、交通、美食和预算建议。"""
-    return search_travel_knowledge(query)
+def knowledge_tool(query: str, city: str = "") -> str:
+    """检索本地旅行知识库，获取目的地季节、区域、交通、美食和预算建议。city 填目的地中文名可提高准确率。"""
+    return search_travel_knowledge(query, city=city)
 
 
 TOOL_MAP = {
