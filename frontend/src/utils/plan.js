@@ -47,6 +47,14 @@ export const CITY_CENTERS = {
   "北欧": [59.9139, 10.7522], "芬兰": [61.9241, 25.7482], "挪威": [60.472, 8.4689], "丹麦": [56.2639, 9.5018],
 };
 
+// 城市中心：先精确匹配，再容错「大阪市 / 京都府」这类后缀；都没有则返回 null
+export function cityCenter(city) {
+  if (!city) return null;
+  if (CITY_CENTERS[city]) return CITY_CENTERS[city];
+  const key = Object.keys(CITY_CENTERS).find((k) => city.includes(k));
+  return key ? CITY_CENTERS[key] : null;
+}
+
 // 知名地标坐标（用于地图精确定位，按名称子串匹配）
 const LANDMARKS = {
   "巴黎": {
@@ -528,7 +536,7 @@ function hashPoint(name, city, seed) {
   for (let i = 0; i < s.length; i++) {
     h = (h * 31 + s.charCodeAt(i)) % 100000;
   }
-  const center = CITY_CENTERS[city] || [35, 105];
+  const center = cityCenter(city) || [35, 105];
   const r = 0.012 + (h % 60) / 100000;
   const theta = ((h * 7 + seed * 131) % 360) * Math.PI / 180;
   return [center[0] + r * Math.cos(theta) * 0.55, center[1] + r * Math.sin(theta)];

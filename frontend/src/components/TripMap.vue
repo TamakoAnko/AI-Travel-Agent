@@ -21,10 +21,10 @@
     <!-- 地图主体 -->
     <div class="map-canvas" @click="clearSelection">
       <!-- 百度真实地图（SDK 就绪后显示） -->
-      <div v-show="sdkStatus === 'ready'" ref="mapEl" class="bd-map"></div>
+      <div v-show="sdkStatus === 'ready' && hasCenter" ref="mapEl" class="bd-map"></div>
 
       <!-- 真实地图增强控件：卫星视图 + 全屏查看 -->
-      <div v-if="sdkStatus === 'ready'" class="map-ctrl">
+      <div v-if="sdkStatus === 'ready' && hasCenter" class="map-ctrl">
         <button
           :class="{ active: isSatellite }"
           :title="isSatellite ? '切换街道地图' : '切换卫星视图'"
@@ -42,7 +42,7 @@
 
       <!-- SDK 加载中 / 加载失败 → SVG 示意地图兜底 -->
       <svg
-        v-show="sdkStatus !== 'ready'"
+        v-show="sdkStatus !== 'ready' || !hasCenter"
         :viewBox="`0 0 ${W} ${H}`"
         preserveAspectRatio="xMidYMid slice"
       >
@@ -186,7 +186,7 @@
 
 <script>
 import BaseIcon from "./BaseIcon.vue";
-import { CITY_CENTERS, CN_CITIES, getSpotCoords, getSpotCoordInfo } from "../utils/plan.js";
+import { cityCenter, CN_CITIES, getSpotCoords, getSpotCoordInfo } from "../utils/plan.js";
 
 const W = 800;
 const H = 520;
@@ -227,6 +227,10 @@ export default {
     };
   },
   computed: {
+    // 城市不在内置坐标表里时不画百度地图：否则点位会落到中国中部（35,105）
+    hasCenter() {
+      return !!cityCenter(this.city);
+    },
     days() {
       const set = new Set(this.spots.map((s) => s.day));
       return Array.from(set).sort((a, b) => a - b);
@@ -250,7 +254,7 @@ export default {
     },
     // ── SVG 兜底投影 ──
     projected() {
-      const center = CITY_CENTERS[this.city] || null;
+      const center = cityCenter(this.city);
       return this.spots.map((s) => {
         let coord;
         if (center) {
@@ -405,7 +409,7 @@ export default {
       if (points.length) {
         this.map.setViewport(points, { margins: [80, 80, 80, 80] });
       } else {
-        const c = CITY_CENTERS[this.city];
+        const c = cityCenter(this.city);
         if (c) this.map.centerAndZoom(new BMapGL.Point(c[1], c[0]), 12);
         else this.map.centerAndZoom(new BMapGL.Point(108.5, 35.5), 4); // 无城市信息 → 全国视野
       }
@@ -597,7 +601,7 @@ export default {
       if (points.length) {
         this.map.setViewport(points, { margins: [80, 80, 80, 80] });
       } else {
-        const c = CITY_CENTERS[this.city];
+        const c = cityCenter(this.city);
         if (c) this.map.centerAndZoom(new this.BMapGL.Point(c[1], c[0]), 12);
         else this.map.centerAndZoom(new this.BMapGL.Point(108.5, 35.5), 4);
       }
