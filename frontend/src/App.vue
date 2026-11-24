@@ -325,10 +325,10 @@ export default {
       // 从「我的旅行」打开的行程要接回原会话，否则会当成新建行程
       const saved = this.viewedTrip;
       if (saved) {
+        // 切到另一份行程：先清掉当前会话，否则聊天区会残留上一个行程的对话
+        this.clearChat();
         if (saved.threadId) this.sessionId = saved.threadId;
-        if (!this.messages.length) {
-          this.messages = [{ role: "assistant", content: saved.raw, _thinkingDone: true }];
-        }
+        this.messages = [{ role: "assistant", content: saved.raw, _thinkingDone: true }];
         this.viewedTrip = null;
       }
       this.view = "chat";
