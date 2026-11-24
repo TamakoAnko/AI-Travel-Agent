@@ -1,10 +1,5 @@
 <template>
   <div class="chat-view">
-    <!-- 正在修改某份已保存行程时，明确提示当前在哪个会话里 -->
-    <div v-if="editingTrip" class="chat-editing">
-      <span>正在修改：{{ editingTrip }}</span>
-      <button class="chat-editing-new" @click="$emit('new-trip')">新建行程</button>
-    </div>
     <div class="chat-messages" ref="msgPanel">
       <!-- 空状态欢迎 -->
       <div v-if="messages.length === 0" class="chat-empty">
@@ -176,7 +171,6 @@ export default {
     rejectFeedback: String,
     feedbackGiven: String,
     inputText: String,
-    editingTrip: String,
   },
   data() {
     return {
@@ -482,31 +476,6 @@ export default {
 }
 
 /* 输入栏 */
-.chat-editing {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  max-width: 860px;
-  margin: 0 auto;
-  padding: 9px 14px;
-  border: 1px solid #dbe4ff;
-  border-radius: 10px;
-  background: #eff4ff;
-  color: #1e3a8a;
-  font-size: 13px;
-}
-.chat-editing-new {
-  border: none;
-  background: none;
-  color: #2563eb;
-  font-size: 13px;
-  cursor: pointer;
-  padding: 0;
-}
-.chat-editing-new:hover {
-  text-decoration: underline;
-}
 .chat-input-area {
   padding: 12px 0 20px;
 }
