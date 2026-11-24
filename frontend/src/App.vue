@@ -91,8 +91,10 @@
           :reject-feedback="rejectFeedback"
           :feedback-given="feedbackGiven"
           :input-text="inputText"
+          :editing-trip="editingTrip"
           @update:inputText="inputText = $event"
           @update:rejectFeedback="rejectFeedback = $event"
+          @new-trip="newTrip"
           @send="sendMessage"
           @stop="stopGeneration"
           @approve="handleApprove"
@@ -204,6 +206,7 @@ export default {
       _toastTimer: null,
       _savedTripIds: {}, // raw -> id（用于取消保存）
       viewedTrip: null, // 从「我的旅行」查看的行程
+      editingTrip: "", // 正在修改哪份行程（显示在对话页顶部）
 
       // ── 聊天状态（原逻辑完整保留） ──
       messages: [],
@@ -325,6 +328,9 @@ export default {
       // 从「我的旅行」打开的行程要接回原会话，否则会当成新建行程
       const saved = this.viewedTrip;
       if (saved) {
+        this.editingTrip = saved.city
+          ? `${saved.city}${saved.duration ? " · " + saved.duration + "天" : ""}`
+          : "";
         if (saved.threadId) this.sessionId = saved.threadId;
         if (!this.messages.length) {
           this.messages = [{ role: "assistant", content: saved.raw, _thinkingDone: true }];
@@ -351,6 +357,8 @@ export default {
     _maybeEnterPlan() {
       // 流结束后：有行程则自动切行程视图（审批待处理时留在对话）
       if (!this.approvalPending && this.hasTrip && !this.loading) {
+        const p = this.currentPlan;
+        this.editingTrip = p && p.city ? `${p.city}${p.duration ? " · " + p.duration + "天" : ""}` : "";
         this.view = "plan";
       }
     },
@@ -1137,6 +1145,7 @@ export default {
       }
     },
     clearChat() {
+      this.editingTrip = "";
       this.messages = [];
       this.sessionId = null;
       this.approvalPending = false;
