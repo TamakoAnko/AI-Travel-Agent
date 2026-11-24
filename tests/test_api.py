@@ -110,6 +110,7 @@ def test_thread_history_list_messages_and_delete():
 
         msgs = client.get("/api/threads/hist-1/messages", headers=headers).json()["messages"]
         assert [m["role"] for m in msgs] == ["user", "assistant"]
+        assert client.get("/api/threads/hist-1/messages", headers=headers).json()["pending"] is None
 
         other = auth_token(client, "13900000014")
         other_headers = {"Authorization": f"Bearer {other}"}

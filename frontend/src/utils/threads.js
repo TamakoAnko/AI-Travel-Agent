@@ -22,11 +22,11 @@ export async function fetchThreadMessages(threadId) {
     const res = await fetch(`${API_BASE}/api/threads/${encodeURIComponent(threadId)}/messages`, {
       headers: authHeaders(),
     });
-    if (!res.ok) return [];
+    if (!res.ok) return { messages: [], pending: null };
     const data = await res.json();
-    return data.messages || [];
+    return { messages: data.messages || [], pending: data.pending || null };
   } catch {
-    return [];
+    return { messages: [], pending: null };
   }
 }
 

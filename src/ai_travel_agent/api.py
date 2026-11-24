@@ -283,10 +283,23 @@ async def threads(request: Request, current_user: str = Depends(auth.require_aut
 async def thread_messages(
     thread_id: str, request: Request, current_user: str = Depends(auth.require_auth)
 ):
-    if not await _owns_thread(request.app.state.graph, current_user, thread_id):
+    graph = request.app.state.graph
+    if not await _owns_thread(graph, current_user, thread_id):
         raise HTTPException(404, "对话不存在")
     messages = await asyncio.to_thread(ShortTermMemory(thread_id).load)
-    return {"thread_id": thread_id, "messages": messages}
+    # 对话可能停在中途（等人工审批），把断点信息一起返回，前端才能恢复审批卡片
+    pending = None
+    state = await graph.aget_state({"configurable": {"thread_id": thread_id}})
+    if state.next:
+        values = state.values or {}
+        stage = values.get("stage")
+        if stage == "trip_review":
+            pending = {"stage": stage, "preview": _brief_preview(values.get("brief", {}))}
+        elif stage == "plan_approval":
+            pending = {"stage": stage, "preview": values.get("plan", "")}
+        else:
+            pending = {"stage": stage or "", "preview": ""}
+    return {"thread_id": thread_id, "messages": messages, "pending": pending}
 
 
 @app.delete("/api/threads/{thread_id}")

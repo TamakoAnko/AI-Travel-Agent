@@ -331,7 +331,7 @@ export default {
       this.view = "history";
     },
     async openThread(t) {
-      const messages = await fetchThreadMessages(t.thread_id);
+      const { messages, pending } = await fetchThreadMessages(t.thread_id);
       if (!messages.length) {
         this._toast("这个对话的内容已过期");
         return;
@@ -343,6 +343,12 @@ export default {
         content: m.content,
         _thinkingDone: true,
       }));
+      // 停在中途的对话：把审批卡片恢复出来，否则发消息会被后端 409 挡住
+      if (pending) {
+        this.approvalPending = true;
+        this.hitlStage = pending.stage || "";
+        this.approvalPlanPreview = pending.preview || "";
+      }
       this.view = "chat";
     },
     newTrip() {
