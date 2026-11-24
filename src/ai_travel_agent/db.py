@@ -129,7 +129,13 @@ def list_trips(user_id: str, limit: int = 50) -> list[dict]:
     ]
 
 
-def delete_trip(user_id: str, trip_id: int) -> bool:
+def delete_trip(user_id: str, trip_id: int) -> str | None:
+    """删除行程并返回它所属的会话 id；行程不存在时返回 None。"""
     with _lock, connect() as conn:
-        cur = conn.execute("DELETE FROM trips WHERE id=? AND user_id=?", (trip_id, user_id))
-        return cur.rowcount > 0
+        row = conn.execute(
+            "SELECT thread_id FROM trips WHERE id=? AND user_id=?", (trip_id, user_id)
+        ).fetchone()
+        if not row:
+            return None
+        conn.execute("DELETE FROM trips WHERE id=? AND user_id=?", (trip_id, user_id))
+        return row["thread_id"] or ""

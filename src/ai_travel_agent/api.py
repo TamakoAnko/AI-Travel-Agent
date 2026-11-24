@@ -264,6 +264,18 @@ async def _owns_thread(graph, user: str, thread_id: str) -> bool:
     return (state.values or {}).get("user_id") == user
 
 
+async def _drop_thread(graph, user_id: str, thread_id: str) -> None:
+    """删掉一个会话的全部痕迹：Redis 索引、短期记忆、LangGraph 断点。"""
+    await asyncio.to_thread(memory.forget_thread, user_id, thread_id)
+    await asyncio.to_thread(memory.clear_thread, thread_id)
+    checkpointer = getattr(graph, "checkpointer", None)
+    if checkpointer is not None and hasattr(checkpointer, "adelete_thread"):
+        try:
+            await checkpointer.adelete_thread(thread_id)
+        except Exception as exc:
+            logger.warning("删除 checkpoint 失败: %s", exc)
+
+
 @app.get("/api/threads")
 async def threads(request: Request, current_user: str = Depends(auth.require_auth)):
     items = await asyncio.to_thread(memory.thread_summaries, memory.list_thread_ids(current_user))
@@ -308,14 +320,7 @@ async def delete_thread(
 ):
     if not await _owns_thread(request.app.state.graph, current_user, thread_id):
         raise HTTPException(404, "对话不存在")
-    await asyncio.to_thread(memory.forget_thread, current_user, thread_id)
-    await asyncio.to_thread(memory.clear_thread, thread_id)
-    checkpointer = getattr(request.app.state.graph, "checkpointer", None)
-    if checkpointer is not None and hasattr(checkpointer, "adelete_thread"):
-        try:
-            await checkpointer.adelete_thread(thread_id)
-        except Exception as exc:
-            logger.warning("删除 checkpoint 失败: %s", exc)
+    await _drop_thread(request.app.state.graph, current_user, thread_id)
     return {"status": "ok"}
 
 
@@ -325,10 +330,16 @@ async def trips(current_user: str = Depends(auth.require_auth)):
 
 
 @app.delete("/api/trips/{trip_id}")
-async def delete_trip(trip_id: int, current_user: str = Depends(auth.require_auth)):
-    if not await asyncio.to_thread(db.delete_trip, current_user, trip_id):
+async def delete_trip(
+    trip_id: int, request: Request, current_user: str = Depends(auth.require_auth)
+):
+    thread_id = await asyncio.to_thread(db.delete_trip, current_user, trip_id)
+    if thread_id is None:
         raise HTTPException(404, "行程不存在")
-    return {"status": "ok"}
+    # 删行程时顺手删掉对应会话，避免「历史对话」里留一条已删行程的对话
+    if thread_id:
+        await _drop_thread(request.app.state.graph, current_user, thread_id)
+    return {"status": "ok", "thread_deleted": bool(thread_id)}
 
 
 @app.post("/api/rag/search")

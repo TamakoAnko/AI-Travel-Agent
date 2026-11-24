@@ -27,8 +27,8 @@
           <span v-if="plan.duration" class="hero-days">{{ plan.duration }}天</span>
         </h1>
         <div class="hero-meta">
-          <span v-if="plan.month" class="meta-item">
-            <BaseIcon name="calendar" :size="14" /> {{ plan.month }}出发
+          <span v-if="plan.startDate || plan.month" class="meta-item">
+            <BaseIcon name="calendar" :size="14" /> {{ startDateLabel }}出发
           </span>
           <span class="meta-item">
             <BaseIcon name="wallet" :size="14" />
@@ -77,7 +77,7 @@
               <div class="day-badge" :style="dayStyle(day.num)">DAY {{ String(day.num).padStart(2, "0") }}</div>
               <div class="day-title-wrap">
                 <h3 class="day-title">{{ day.title || `第 ${day.num} 天` }}</h3>
-                <span class="day-count">{{ day.points.length }} 个地点{{ day.schedule.length ? ` · ${day.schedule.length} 个时段` : "" }}</span>
+                <span class="day-count">{{ dayDate(day.num) ? dayDate(day.num) + " · " : "" }}{{ day.points.length }} 个地点{{ day.schedule.length ? ` · ${day.schedule.length} 个时段` : "" }}</span>
               </div>
               <BaseIcon name="chevron-right" :size="16" class="day-arrow" />
             </div>
@@ -270,7 +270,7 @@
 import BaseIcon from "./BaseIcon.vue";
 import TripMap from "./TripMap.vue";
 import { renderMarkdown } from "../utils/markdown.js";
-import { getCityVisual, isTripSaved } from "../utils/plan.js";
+import { formatDayDate, formatStartDate, getCityVisual, isTripSaved } from "../utils/plan.js";
 
 const DAY_COLORS = ["#2563eb", "#0d9488", "#b45309", "#7c3aed", "#be185d", "#0369a1", "#4d7c0f"];
 const REC_TONES = [
@@ -304,6 +304,9 @@ export default {
     };
   },
   computed: {
+    startDateLabel() {
+      return formatStartDate(this.plan.startDate, this.plan.month);
+    },
     visual() {
       return getCityVisual(this.plan.city);
     },
@@ -358,6 +361,9 @@ export default {
   },
   methods: {
     renderMarkdown,
+    dayDate(num) {
+      return formatDayDate(this.plan.startDate, num);
+    },
     dayStyle(num) {
       const color = DAY_COLORS[(num - 1) % DAY_COLORS.length];
       return { background: color, color };

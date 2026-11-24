@@ -57,11 +57,14 @@ def test_stream_requires_auth():
 
 def test_trips_list_and_delete():
     from ai_travel_agent import db
+    from ai_travel_agent.memory import ShortTermMemory, remember_thread
 
     with TestClient(app) as client:
         token = auth_token(client, "13900000009")
         headers = {"Authorization": f"Bearer {token}"}
         trip_id = db.save_trip("13900000009", "th-trips", {"destination": "京都"}, "# 京都 3 天行程")
+        ShortTermMemory("th-trips").append("user", "京都 3 天")
+        remember_thread("13900000009", "th-trips")
 
         items = client.get("/api/trips", headers=headers).json()["items"]
         assert [i["id"] for i in items] == [trip_id]
@@ -76,6 +79,8 @@ def test_trips_list_and_delete():
 
         assert client.delete(f"/api/trips/{trip_id}", headers=headers).status_code == 200
         assert client.get("/api/trips", headers=headers).json()["items"] == []
+        # 删行程时对应的会话也一起删掉，历史对话里不留孤儿
+        assert client.get("/api/threads", headers=headers).json()["items"] == []
         assert client.get("/api/trips").status_code == 401
 
 

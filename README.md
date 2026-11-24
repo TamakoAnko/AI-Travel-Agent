@@ -181,7 +181,7 @@ docker compose up -d --build
 | GET | `/api/threads/{thread_id}/messages` | 读取某个对话的消息 |
 | DELETE | `/api/threads/{thread_id}` | 删除对话（记忆 + 断点） |
 | GET | `/api/trips` | 当前账号已保存的行程列表 |
-| DELETE | `/api/trips/{trip_id}` | 删除自己的行程（非本人返回 404） |
+| DELETE | `/api/trips/{trip_id}` | 删除自己的行程，同时删掉对应会话（非本人返回 404） |
 
 ## 工作流
 

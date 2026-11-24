@@ -197,6 +197,38 @@ function findDuration(md) {
   return "";
 }
 
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+// 从计划正文里找具体出发日期：2026-11-25 / 2026年11月25日 / 11月25日
+function findStartDate(md) {
+  const full = md.match(/(20\d{2})\s*[-/年.]\s*(\d{1,2})\s*[-/月.]\s*(\d{1,2})/);
+  if (full) return `${full[1]}-${pad2(full[2])}-${pad2(full[3])}`;
+  const short = md.match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日/);
+  if (short) return `${new Date().getFullYear()}-${pad2(short[1])}-${pad2(short[2])}`;
+  return "";
+}
+
+// 第 n 天的日期（用于每日行程展示）；没有出发日期时返回空串
+export function formatDayDate(startDate, dayNum) {
+  if (!startDate) return "";
+  const d = new Date(`${startDate}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return "";
+  d.setDate(d.getDate() + (dayNum - 1));
+  return `${d.getMonth() + 1}.${pad2(d.getDate())}`;
+}
+
+export function formatStartDate(startDate, month) {
+  if (startDate) {
+    const d = new Date(`${startDate}T00:00:00`);
+    if (!Number.isNaN(d.getTime())) {
+      return `${d.getMonth() + 1}月${d.getDate()}日`;
+    }
+  }
+  return month || "";
+}
+
 function findMonth(md) {
   const m = md.match(/(\d{1,2})\s*月/);
   if (m) return `${parseInt(m[1], 10)}月`;
@@ -511,6 +543,7 @@ export function parsePlan(md) {
     city,
     duration: findDuration(md),
     month: findMonth(md),
+    startDate: findStartDate(md),
     budget: findBudget(md) || null,  // 用户给出的具体预算；未给出时为 null（不拿方案总计顶替）
     styles: findStyles(md),
     days,
