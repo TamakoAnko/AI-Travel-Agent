@@ -309,8 +309,8 @@ export default {
     editPlan() {
       // 从「我的旅行」打开的行程要接回原会话，否则会当成新建行程
       const saved = this.viewedTrip;
-      if (saved && saved.threadId) {
-        this.sessionId = saved.threadId;
+      if (saved) {
+        if (saved.threadId) this.sessionId = saved.threadId;
         if (!this.messages.length) {
           this.messages = [{ role: "assistant", content: saved.raw, _thinkingDone: true }];
         }
@@ -422,6 +422,7 @@ export default {
         attractions: [],
         hasDays: false,
       };
+      this.viewedTrip.threadId = trip.threadId; // 供「修改需求」接回原会话
       this.activeDay = 1;
       this.view = "plan";
     },
