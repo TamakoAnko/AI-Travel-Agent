@@ -333,8 +333,10 @@ async def delete_trip(trip_id: int, current_user: str = Depends(auth.require_aut
 
 @app.post("/api/rag/search")
 async def rag_search(payload: RAGSearchRequest, current_user: str = Depends(auth.require_auth)):
-    results = await asyncio.to_thread(get_kb().search, payload.query, payload.top_k)
-    return {"query": payload.query, "results": results}
+    results = await asyncio.to_thread(
+        get_kb().search, payload.query, payload.top_k, payload.city or None
+    )
+    return {"query": payload.query, "city": payload.city, "results": results}
 
 
 @app.post("/api/baidu/geocode-batch")

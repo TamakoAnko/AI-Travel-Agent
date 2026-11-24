@@ -55,6 +55,7 @@ class GeocodeBatchRequest(BaseModel):
 class RAGSearchRequest(BaseModel):
     query: str
     top_k: int = 4
+    city: str = ""
 
 
 class TravelState(TypedDict):

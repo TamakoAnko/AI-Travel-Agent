@@ -132,11 +132,17 @@ def city_of(source: str) -> str:
     return CITY_BY_FILE.get(stem, Path(source).stem)
 
 
+STOPWORDS = {
+    "的", "了", "是", "在", "和", "与", "及", "吗", "呢", "吧", "我", "你", "想", "去",
+    "怎么", "什么", "多少", "如何", "可以", "要", "一般", "大概",
+}
+
+
 def tokenize(text: str) -> list[str]:
-    """中文按单字 + 二元组切，英文数字按词切；不引额外分词依赖。"""
-    tokens = re.findall(r"[\u4e00-\u9fff]|[a-zA-Z0-9]+", text.lower())
-    cjk = [t for t in tokens if len(t) == 1 and "\u4e00" <= t <= "\u9fff"]
-    return tokens + [a + b for a, b in zip(cjk, cjk[1:])]
+    """英文数字按词切、中文按二元组切；不带单字，减少「选」「的」这类噪声。"""
+    words = re.findall(r"[a-zA-Z0-9]+", text.lower())
+    cjk = re.findall(r"[\u4e00-\u9fff]", text)
+    return words + [a + b for a, b in zip(cjk, cjk[1:])]
 
 
 def bm25_scores(query: str, docs: list[str], k1: float = 1.5, b: float = 0.75) -> list[float]:
@@ -150,7 +156,7 @@ def bm25_scores(query: str, docs: list[str], k1: float = 1.5, b: float = 0.75) -
         for term in set(tokens):
             df[term] = df.get(term, 0) + 1
     n = len(docs)
-    q_terms = set(tokenize(query))
+    q_terms = {t for t in tokenize(query) if t not in STOPWORDS}
     scores = []
     for tokens in tokenized:
         tf: dict[str, int] = {}
@@ -167,12 +173,15 @@ def bm25_scores(query: str, docs: list[str], k1: float = 1.5, b: float = 0.75) -
     return scores
 
 
-def rrf_fuse(rankings: list[list[int]], k: int = 60) -> dict[int, float]:
+def rrf_fuse(
+    rankings: list[list[int]], k: int = 60, weights: list[float] | None = None
+) -> dict[int, float]:
     """倒数排名融合：只看名次不看分数，避免向量相似度和 BM25 分数量纲不同。"""
+    weights = weights or [1.0] * len(rankings)
     fused: dict[int, float] = {}
-    for ranking in rankings:
+    for ranking, weight in zip(rankings, weights):
         for rank, idx in enumerate(ranking, start=1):
-            fused[idx] = fused.get(idx, 0.0) + 1.0 / (k + rank)
+            fused[idx] = fused.get(idx, 0.0) + weight / (k + rank)
     return fused
 
 
@@ -286,11 +295,12 @@ class KnowledgeBase:
             order = sorted(range(len(rows)), key=lambda i: vec_scores[i], reverse=True)
             picked = [(i, vec_scores[i]) for i in order if vec_scores[i] > 0.05][:top_k]
         else:
-            docs = [f"{r['city']} {r['section']} {r['content']}" for r in rows]
+            # 只索引城市 + 正文：章节名（如「交通」「美食」）8 个城市完全一样，放进来只会互相干扰
+            docs = [f"{r['city']} {r['content']}" for r in rows]
             lex_scores = bm25_scores(query, docs)
             vec_rank = sorted(range(len(rows)), key=lambda i: vec_scores[i], reverse=True)
             lex_rank = sorted(range(len(rows)), key=lambda i: lex_scores[i], reverse=True)
-            fused = rrf_fuse([vec_rank, lex_rank])
+            fused = rrf_fuse([vec_rank, lex_rank], weights=[1.0, 0.6])
             picked = sorted(fused.items(), key=lambda kv: kv[1], reverse=True)[:top_k]
 
         return [
