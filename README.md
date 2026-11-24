@@ -48,6 +48,16 @@ flowchart TD
     G --> RD
 ```
 
+## 界面
+
+| 灵感页 · 一句话开始规划 | 行程页 · 每日行程 + 地图 |
+|---|---|
+| ![灵感页](docs/screenshots/02-inspiration.jpg) | ![行程页](docs/screenshots/01-trip-detail.jpg) |
+
+| 我的旅行 · 账号内保存的行程 | 历史对话 · 回看 / 继续 / 删除 |
+|---|---|
+| ![我的旅行](docs/screenshots/03-saved-trips.jpg) | ![历史对话](docs/screenshots/04-chat-history.jpg) |
+
 ## 技术栈
 
 | 层 | 技术 |
