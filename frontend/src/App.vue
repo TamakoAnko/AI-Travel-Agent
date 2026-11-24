@@ -167,7 +167,7 @@ import ChatView from "./components/ChatView.vue";
 import PlanView from "./components/PlanView.vue";
 import SavedTripsView from "./components/SavedTripsView.vue";
 import SettingsDrawer from "./components/SettingsDrawer.vue";
-import { parsePlan, saveTrip, removeSavedTrip, getSavedTrips } from "./utils/plan.js";
+import { parsePlan, saveTrip, removeSavedTrip, getSavedTrips, fetchServerTrips } from "./utils/plan.js";
 import { sanitizeJson } from "./utils/markdown.js";
 
 // crypto.randomUUID 仅在安全上下文（HTTPS/localhost）可用；
@@ -293,15 +293,24 @@ export default {
     goHome() {
       this.view = "home";
     },
-    goPlan() {
-      // 有行程看行程，没有行程回灵感页开始规划
+    async goPlan() {
+      // 有行程看行程
       if (this.viewedTrip || this.hasTrip) {
         this.view = "plan";
-      } else if (this.messages.length) {
-        this.view = "chat";
-      } else {
-        this.view = "home";
+        return;
       }
+      // 有对话但还没出计划：回对话页，不丢进度
+      if (this.messages.length) {
+        this.view = "chat";
+        return;
+      }
+      // 本页没有行程：取账号里最新的一份展示；没有才回灵感页
+      const trips = await fetchServerTrips();
+      if (trips.length) {
+        this.viewSavedTrip(trips[0]);
+        return;
+      }
+      this.view = "home";
     },
     goSaved() {
       this.view = "saved";
