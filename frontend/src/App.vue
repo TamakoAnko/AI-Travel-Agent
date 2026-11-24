@@ -306,22 +306,18 @@ export default {
       this.view = "home";
     },
     async goPlan() {
-      // 有行程看行程
+      // 行程页只展示已完成的行程，不负责创建，也不会跳进未完成的对话
       if (this.viewedTrip || this.hasTrip) {
         this.view = "plan";
         return;
       }
-      // 有对话但还没出计划：回对话页，不丢进度
-      if (this.messages.length) {
-        this.view = "chat";
-        return;
-      }
-      // 本页没有行程：取账号里最新的一份展示；没有才回灵感页
+      // 当前会话没有成品行程：展示账号里最新保存的一份
       const trips = await fetchServerTrips();
       if (trips.length) {
         this.viewSavedTrip(trips[0]);
         return;
       }
+      this._toast("还没有已完成的行程，先去灵感页规划一份吧");
       this.view = "home";
     },
     goSaved() {
