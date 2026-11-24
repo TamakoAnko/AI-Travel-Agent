@@ -307,6 +307,15 @@ export default {
       this._toast("已开始新的行程规划");
     },
     editPlan() {
+      // 从「我的旅行」打开的行程要接回原会话，否则会当成新建行程
+      const saved = this.viewedTrip;
+      if (saved && saved.threadId) {
+        this.sessionId = saved.threadId;
+        if (!this.messages.length) {
+          this.messages = [{ role: "assistant", content: saved.raw, _thinkingDone: true }];
+        }
+        this.viewedTrip = null;
+      }
       this.view = "chat";
       this.$nextTick(() => {
         const cv = this.$refs.chatView;

@@ -66,6 +66,7 @@ def test_trips_list_and_delete():
         items = client.get("/api/trips", headers=headers).json()["items"]
         assert [i["id"] for i in items] == [trip_id]
         assert "京都" in items[0]["plan"]
+        assert items[0]["thread_id"] == "th-trips"
 
         other = auth_token(client, "13900000010")
         denied = client.delete(

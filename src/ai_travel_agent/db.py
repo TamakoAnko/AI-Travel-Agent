@@ -100,12 +100,13 @@ def recent_trips(user_id: str, limit: int = 3) -> list[dict]:
 def list_trips(user_id: str, limit: int = 50) -> list[dict]:
     with connect() as conn:
         rows = conn.execute(
-            "SELECT id, brief, plan, created_at FROM trips WHERE user_id=? ORDER BY id DESC LIMIT ?",
+            "SELECT id, thread_id, brief, plan, created_at FROM trips WHERE user_id=? ORDER BY id DESC LIMIT ?",
             (user_id, limit),
         ).fetchall()
     return [
         {
             "id": r["id"],
+            "thread_id": r["thread_id"],
             "brief": json.loads(r["brief"]),
             "plan": r["plan"],
             "created_at": r["created_at"],

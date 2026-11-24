@@ -609,6 +609,7 @@ export async function fetchServerTrips() {
       return {
         id: `srv-${t.id}`,
         serverId: t.id,
+        threadId: t.thread_id,
         title: `${city || "行程"}${parsed.duration ? " · " + parsed.duration + "天" : ""}`,
         city,
         createdAt: Date.parse(t.created_at) || 0,
