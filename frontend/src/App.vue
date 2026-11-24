@@ -341,6 +341,8 @@ export default {
       });
     },
     submitFromHero(text) {
+      // 灵感页提交一律开新会话：否则会接在上一份行程的线程后面（甚至撞上未处理的审批）
+      this.clearChat();
       this.inputText = text;
       this.sendMessage();
     },
