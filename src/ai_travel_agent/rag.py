@@ -185,14 +185,41 @@ def rrf_fuse(
     return fused
 
 
+def default_splitter() -> RecursiveCharacterTextSplitter:
+    return RecursiveCharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=80,
+        separators=["\n\n", "\n", "。", "；", " ", ""],
+    )
+
+
+def split_document(
+    text: str, splitter: RecursiveCharacterTextSplitter | None = None
+) -> list[tuple[str, str]]:
+    """先按 Markdown 二级标题切主题，再在主题内按长度切，返回 [(section, chunk)]。"""
+    splitter = splitter or default_splitter()
+    matches = list(HEADING_RE.finditer(text))
+    if not matches:
+        return [("", c.strip()) for c in splitter.split_text(text) if c.strip()]
+    parts: list[tuple[str, str]] = []
+    for i, m in enumerate(matches):
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+        section = m.group(2).strip()
+        body = text[m.end():end].strip()
+        if not body:
+            continue
+        for chunk in splitter.split_text(body):
+            if chunk.strip():
+                parts.append((section, chunk.strip()))
+    return parts
+
+
 class KnowledgeBase:
+    backend_name = "sqlite"
+
     def __init__(self) -> None:
         self.embedder = get_embedder()
-        self.splitter = RecursiveCharacterTextSplitter(
-            chunk_size=500,
-            chunk_overlap=80,
-            separators=["\n\n", "\n", "。", "；", " ", ""],
-        )
+        self.splitter = default_splitter()
 
     def count(self) -> int:
         with db.connect() as conn:
@@ -207,21 +234,7 @@ class KnowledgeBase:
         return self.ingest_dir(settings.knowledge_dir, reset=reset)
 
     def split_document(self, text: str) -> list[tuple[str, str]]:
-        """先按 Markdown 二级标题切主题，再在主题内按长度切，返回 [(section, chunk)]。"""
-        matches = list(HEADING_RE.finditer(text))
-        if not matches:
-            return [("", c.strip()) for c in self.splitter.split_text(text) if c.strip()]
-        parts: list[tuple[str, str]] = []
-        for i, m in enumerate(matches):
-            end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
-            section = m.group(2).strip()
-            body = text[m.end():end].strip()
-            if not body:
-                continue
-            for chunk in self.splitter.split_text(body):
-                if chunk.strip():
-                    parts.append((section, chunk.strip()))
-        return parts
+        return split_document(text, self.splitter)
 
     def ingest_dir(self, directory: Path, reset: bool = False) -> int:
         files = sorted(Path(directory).glob("*.md")) + sorted(Path(directory).glob("*.txt"))
@@ -319,8 +332,18 @@ class KnowledgeBase:
 _kb: KnowledgeBase | None = None
 
 
-def get_kb() -> KnowledgeBase:
+def get_kb():
+    """按配置返回检索后端；Milvus 不可用时自动回退到 SQLite，保证服务能起。"""
     global _kb
     if _kb is None:
-        _kb = KnowledgeBase()
+        if settings.rag_backend.lower() == "milvus":
+            try:
+                from .rag_milvus import MilvusKnowledgeBase
+
+                _kb = MilvusKnowledgeBase()
+            except Exception as exc:
+                logger.warning("Milvus 不可用，回退到 SQLite 检索: %s", exc)
+                _kb = KnowledgeBase()
+        else:
+            _kb = KnowledgeBase()
     return _kb

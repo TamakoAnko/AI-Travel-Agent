@@ -206,6 +206,52 @@ data/knowledge/*.md
 
 内置 8 个目的地的原创知识文档（巴黎、东京、曼谷、罗马、北京、上海、巴厘岛、纽约），无需额外准备数据即可体验。
 
+### 向量库与 LlamaIndex（可选）
+
+默认 `RAG_BACKEND=sqlite`，零依赖即可运行；切到 `RAG_BACKEND=milvus` 后检索走 LlamaIndex + Milvus：
+
+- 节点：`TextNode(text, metadata={source, city, section})`，复用同一套章节切分
+- 召回：`VectorIndexRetriever`（Milvus）+ `BM25Retriever` 双路，`QueryFusionRetriever(mode="reciprocal_rerank")` 做 RRF 融合
+- 过滤：`MetadataFilters(city=...)` 先按城市收窄，再做召回
+
+本地起 Milvus（WSL2 Ubuntu，不需要 Docker）：
+
+```bash
+python3 -m venv ~/milvus-venv
+~/milvus-venv/bin/pip install -U milvus
+~/milvus-venv/bin/milvus-server --data ~/milvus-data
+```
+
+Windows 侧取 WSL 的 IP（重启 WSL 后会变）：
+
+```powershell
+wsl -d Ubuntu -- ip -4 addr show eth0
+```
+
+写入 `.env`：
+
+```env
+RAG_BACKEND=milvus
+MILVUS_URI=http://<WSL-IP>:19530
+```
+
+启动顺序（每次开机）：Redis → Milvus → 后端 → 前端。Windows 侧可一键：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\dev_up.ps1
+```
+
+（脚本会读取 WSL 的 IP、同步 `.env` 里的 `MILVUS_URI`、启动 Redis 与 `milvus-server`）
+
+降级：`RAG_BACKEND=milvus` 但 Milvus 连不上时，`get_kb()` 会打一条 warning 并自动回退到 SQLite 检索，服务照常启动；`/api/health` 的 `rag_backend` 字段会显示实际使用的后端。
+
+两种后端跑同一套 24 条评测：
+
+| 后端 | 文档 Recall@3 | 章节命中@3 |
+|---|---|---|
+| SQLite（默认） | 1.000 | 1.000 |
+| Milvus + LlamaIndex | 1.000 | 1.000 |
+
 ### 检索评测
 
 `eval/retrieval_cases.json` 有 24 条「问题 → 期望文档/章节」标注，`scripts/eval_rag.py` 计算文档召回、章节命中与 MRR：

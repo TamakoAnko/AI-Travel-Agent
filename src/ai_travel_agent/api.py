@@ -191,6 +191,7 @@ async def health():
             "redis": check_redis(),
             "short_term": check_redis(),
             "rag": kb.count() > 0,
+            "rag_backend": getattr(kb, "backend_name", "unknown"),
             "embedding": kb.embedder.name,
         },
     }

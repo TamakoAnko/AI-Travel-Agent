@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     short_term_ttl: int = 7 * 24 * 3600
     short_term_summary_chars: int = 1200
 
+    # RAG 后端：sqlite（零依赖兜底）| milvus
+    rag_backend: str = "sqlite"
+    milvus_uri: str = "http://127.0.0.1:19530"
+    milvus_collection: str = "travel_kb"
+
     # LangSmith 可选可观测性
     langsmith_api_key: str = ""
     langsmith_project: str = "ai-travel-agent"

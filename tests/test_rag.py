@@ -71,3 +71,13 @@ def test_hybrid_mode_returns_section(tmp_path: Path):
     results = kb.search("午市套餐人均多少欧元", top_k=3, mode="hybrid")
     assert results
     assert results[0]["section"] == "美食"
+
+
+def test_milvus_backend_falls_back_to_sqlite(monkeypatch):
+    from ai_travel_agent import rag
+
+    monkeypatch.setattr(rag.settings, "rag_backend", "milvus")
+    monkeypatch.setattr(rag.settings, "milvus_uri", "http://127.0.0.1:1")
+    monkeypatch.setattr(rag, "_kb", None)
+    kb = rag.get_kb()
+    assert type(kb).__name__ == "KnowledgeBase"
