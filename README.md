@@ -26,7 +26,7 @@ flowchart TD
     API -->|progress / thinking / token / approval| FE
 
     API --> G[LangGraph StateGraph]
-    G --> IN[Intake 需求提取]
+    G --> IN[Intake 主管节点<br/>需求提取 / 结构化 Brief]
     IN --> RV{Trip Review 人工确认}
     RV -->|驳回 + 反馈| IN
     RV -->|通过| FAN[Send 并行派发]
@@ -57,7 +57,7 @@ flowchart TD
     EMB --> MV
     SP --> BM
 
-    FL --> CP[Compose 汇总<br/>校验 DAY 连续 / 预算表]
+    FL --> CP[Compose 主管节点<br/>汇总 + 校验 DAY / 预算表]
     HO --> CP
     IT --> CP
     WE --> CP
@@ -71,6 +71,8 @@ flowchart TD
     G --> RD[(Redis: 短期记忆)]
     API --> RD
 ```
+
+主管 Agent 没有独立节点：需求提取（`intake`）和最终汇总（`compose`）都用 `SUPERVISOR_MODEL`，分派与回退由 `review`、`approval` 之后的条件边决定。这样少一次 LLM 调用，编排逻辑仍然可控。
 
 ## 界面
 
