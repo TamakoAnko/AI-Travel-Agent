@@ -9,10 +9,12 @@
 
     <div v-if="trips.length" class="trip-grid">
       <div v-for="trip in trips" :key="trip.id" class="trip-card card">
-        <div
-          class="trip-cover"
-          :style="{ background: `linear-gradient(135deg, ${tone(trip.city)[0]} 0%, ${tone(trip.city)[1]} 100%)` }"
-        >
+        <div class="trip-cover" :style="coverStyle(trip)">
+          <div class="trip-meta">
+            <span v-if="meta(trip).duration">{{ meta(trip).duration }} 天</span>
+            <span v-if="meta(trip).budget">¥{{ meta(trip).budget }}</span>
+            <span v-if="meta(trip).month">{{ meta(trip).month }}</span>
+          </div>
           <span class="trip-city">{{ trip.city || "行程" }}</span>
           <span class="trip-en">{{ tone(trip.city).en }}</span>
         </div>
@@ -49,7 +51,7 @@
 
 <script>
 import BaseIcon from "./BaseIcon.vue";
-import { getSavedTrips, removeSavedTrip, getCityVisual, fetchServerTrips, deleteServerTrip } from "../utils/plan.js";
+import { getSavedTrips, removeSavedTrip, getCityVisual, fetchServerTrips, deleteServerTrip, parsePlan } from "../utils/plan.js";
 
 export default {
   name: "SavedTripsView",
@@ -70,6 +72,27 @@ export default {
       const seen = new Set(remote.map((t) => t.raw));
       this.trips = [...remote, ...local.filter((t) => !seen.has(t.raw))]
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    },
+    meta(trip) {
+      const plan = parsePlan(trip.raw) || {};
+      return {
+        duration: plan.duration || "",
+        budget: plan.budget || plan.budgetTotal || "",
+        month: plan.month || "",
+      };
+    },
+    // 图片做背景、渐变做遮罩；图片加载失败时 backgroundColor 兜底，不会白屏
+    coverStyle(trip) {
+      const visual = this.tone(trip.city);
+      const [c1, c2] = visual.tone || ["#1E3A5F", "#5B7C99"];
+      const layers = [`linear-gradient(160deg, ${c1}dd 0%, ${c2}aa 55%, #0f172ad9 100%)`];
+      if (visual.img) layers.push(`url("${visual.img}")`);
+      return {
+        backgroundColor: c1,
+        backgroundImage: layers.join(", "),
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      };
     },
     tone(city) {
       const v = getCityVisual(city);
@@ -132,11 +155,28 @@ export default {
   box-shadow: var(--shadow-md);
 }
 .trip-cover {
-  height: 130px;
+  position: relative;
+  height: 150px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   padding: 14px 16px;
+  color: #fff;
+}
+.trip-meta {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.trip-meta span {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(6px);
+  font-size: 11.5px;
   color: #fff;
 }
 .trip-city {
