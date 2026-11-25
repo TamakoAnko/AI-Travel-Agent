@@ -13,7 +13,7 @@
           <div class="trip-meta">
             <span v-if="meta(trip).duration">{{ meta(trip).duration }} 天</span>
             <span v-if="meta(trip).budget">¥{{ meta(trip).budget }}</span>
-            <span v-if="meta(trip).month">{{ meta(trip).month }}</span>
+            <span v-if="meta(trip).depart">{{ meta(trip).depart }}出发</span>
           </div>
           <span class="trip-city">{{ trip.city || "行程" }}</span>
           <span class="trip-en">{{ tone(trip.city).en }}</span>
@@ -51,7 +51,7 @@
 
 <script>
 import BaseIcon from "./BaseIcon.vue";
-import { getSavedTrips, removeSavedTrip, getCityVisual, fetchServerTrips, deleteServerTrip, parsePlan } from "../utils/plan.js";
+import { getSavedTrips, removeSavedTrip, getCityVisual, fetchServerTrips, deleteServerTrip, parsePlan, formatStartDate } from "../utils/plan.js";
 
 export default {
   name: "SavedTripsView",
@@ -78,7 +78,8 @@ export default {
       return {
         duration: plan.duration || "",
         budget: plan.budget || plan.budgetTotal || "",
-        month: plan.month || "",
+        // 优先具体日期（11月25日），行程里只有月份时退回月份
+        depart: formatStartDate(plan.startDate, plan.month),
       };
     },
     // 图片做背景、渐变做遮罩；图片加载失败时 backgroundColor 兜底，不会白屏
