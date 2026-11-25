@@ -22,30 +22,54 @@
 ```mermaid
 flowchart TD
     U[用户] --> FE[Vue 3 前端]
-    FE -->|SSE /api/stream| API[FastAPI]
-    API --> G[LangGraph]
+    FE -->|GET /api/stream  SSE| API[FastAPI]
+    API -->|progress / thinking / token / approval| FE
+
+    API --> G[LangGraph StateGraph]
     G --> IN[Intake 需求提取]
     IN --> RV{Trip Review 人工确认}
-    RV -->|approve| FAN[Send 并行派发]
-    RV -->|reject| IN
+    RV -->|驳回 + 反馈| IN
+    RV -->|通过| FAN[Send 并行派发]
+
     FAN --> FL[Flight Agent]
     FAN --> HO[Hotel Agent]
     FAN --> IT[Itinerary Agent]
     FAN --> WE[Weather Agent]
-    FL --> T1[Tavily]
+
+    FL --> T1[Tavily 搜索]
     HO --> T1
-    IT --> RAG[(RAG 知识库)]
     IT --> T1
-    WE --> T2[Open-Meteo]
-    FL --> CP[Compose 汇总]
+    WE --> T2[Open-Meteo 天气]
+
+    %% ---- 在线检索链路 ----
+    IT -->|knowledge_tool query + city| VR[向量召回 top20<br/>MetadataFilter city]
+    IT --> BM[BM25 召回 top20]
+    VR --> MV[(Milvus<br/>travel_kb_*)]
+    VR -. Milvus 不可用 .-> SQ[(SQLite<br/>全量余弦)]
+    VR --> RRF[RRF 融合<br/>QueryFusionRetriever]
+    BM --> RRF
+    RRF --> TOP[top-k 片段<br/>带 source/city/section]
+    TOP -->|片段文本 + 来源| IT
+
+    %% ---- 离线建库 ----
+    DOC[data/knowledge/*.md 8 篇] --> SP[split_document<br/>按章节切 → 48 片段]
+    SP --> EMB[DashScope embedding 1024d]
+    EMB --> MV
+    SP --> BM
+
+    FL --> CP[Compose 汇总<br/>校验 DAY 连续 / 预算表]
     HO --> CP
     IT --> CP
     WE --> CP
+
     CP --> AP{Plan Approval 人工审批}
-    AP -->|approve| DB[(SQLite 行程)]
-    AP -->|reject| CP
-    API --> RD[(Redis: OTP / Token / 短期记忆)]
-    G --> RD
+    AP -->|驳回 + 反馈| CP
+    AP -->|通过| FIN[Finalize]
+    FIN --> DB[(SQLite: users / trips)]
+
+    G -.每步断点.-> CK[(SQLite: checkpoints)]
+    G --> RD[(Redis: 短期记忆)]
+    API --> RD
 ```
 
 ## 界面
