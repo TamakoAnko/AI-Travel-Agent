@@ -77,6 +77,8 @@ flowchart TD
 
 ## 快速开始
 
+> 完整的启动顺序（Redis → Milvus → 后端 → 前端）、一键脚本与常见问题见 [docs/STARTUP.md](docs/STARTUP.md)。
+
 ### 1. 环境
 
 - Python 3.11+
